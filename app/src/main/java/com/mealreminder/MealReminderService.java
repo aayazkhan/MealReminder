@@ -1,9 +1,10 @@
 package com.mealreminder;
 
 import android.app.AlarmManager;
-import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -35,7 +36,7 @@ public class MealReminderService extends JobIntentService {
         DatabaseRepository databaseRepository = new DatabaseRepository(getApplicationContext());
         MealReminder mealReminder = databaseRepository.getMealReminderDao().getMealReminder();
 
-        addNotification(mealReminder);
+        showNotification(getApplicationContext(), mealReminder, new Intent(getApplicationContext(), MainActivity.class));
 
         mealReminder.setStatus("COMPLETED");
         databaseRepository.getMealReminderDao().update(mealReminder);
@@ -45,19 +46,34 @@ public class MealReminderService extends JobIntentService {
 
     }
 
-    private void addNotification(MealReminder mealReminder) {
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(getApplicationContext(), "MEAL_REMINDER");
-        notificationBuilder.setAutoCancel(true)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setWhen(System.currentTimeMillis())
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setTicker("MealReminder")
-                .setContentTitle("Meal Reminder")
-                .setContentText(mealReminder.getFood())
-                .setContentInfo(mealReminder.getFood());
+    public void showNotification(Context context, MealReminder mealReminder, Intent intent) {
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(1, notificationBuilder.build());
+        int notificationId = 1;
+        String channelId = "Meal_Reminder";
+        String channelName = "Meal Reminder";
+        int importance = NotificationManager.IMPORTANCE_HIGH;
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel mChannel = new NotificationChannel(
+                    channelId, channelName, importance);
+            notificationManager.createNotificationChannel(mChannel);
+        }
+
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Meal Reminder")
+                .setContentText(mealReminder.getFood());
+
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        stackBuilder.addNextIntent(intent);
+        PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(
+                0,
+                PendingIntent.FLAG_UPDATE_CURRENT
+        );
+        mBuilder.setContentIntent(resultPendingIntent);
+
+        notificationManager.notify(notificationId, mBuilder.build());
     }
 
     private void setAlarm(MealReminder mealReminder) {

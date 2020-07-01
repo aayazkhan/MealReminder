@@ -16,7 +16,7 @@ public class AlarmReceiver extends BroadcastReceiver {
         screenLock.setReferenceCounted(true);
         screenLock.acquire();
 
-        if (Build.VERSION.SDK_INT >= 27) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             intent = new Intent(context, MealReminderService.class);
             MealReminderService.enqueueWork(context, intent);
         } else {
